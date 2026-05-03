@@ -1,11 +1,18 @@
 package com.inovatech.ms_inventario_innovatech.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import java.math.BigDecimal;
 
 @Entity
 @Table(name = "productos")
@@ -29,10 +36,9 @@ public class Producto {
     private String descripcion;
     
     @NotNull(message = "El precio es obligatorio")
-    @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo")
-    @Digits(integer = 10, fraction = 2, message = "El precio debe tener máximo 10 dígitos enteros y 2 decimales")
-    @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal precio;
+    @Min(value = 0, message = "El precio no puede ser negativo")
+    @Column(nullable = false)
+    private Float precio;
     
     @NotNull(message = "El stock es obligatorio")
     @Min(value = 0, message = "El stock no puede ser negativo")
