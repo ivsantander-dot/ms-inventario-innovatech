@@ -80,7 +80,7 @@ Todos los campos son obligatorios y tienen las siguientes validaciones:
 ### Ejecutar la aplicación
 ```bash
 # Compilar y ejecutar
-./mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
 
 La aplicación se iniciará en `http://localhost:8080`
@@ -101,3 +101,28 @@ Una vez iniciada la aplicación, puedes acceder a:
 - **Base URL**: `http://localhost:8080/api/productos`
 - **Headers**: `Content-Type: application/json`
 
+### Ejemplo de petición POST
+```bash
+curl -X POST http://localhost:8080/api/productos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Monitor Samsung 27\"",
+    "descripcion": "Monitor IPS 4K con HDR10 y 60Hz",
+    "precio": 399.99,
+    "stock": 15,
+    "categoria": "Pantallas"
+  }'
+```
+
+### Ejemplo de petición GET
+```bash
+curl -X GET http://localhost:8080/api/productos
+```
+
+## Ejecutar Tests
+```bash
+# Ejecutar todos los tests
+.\mvnw.cmd test
+
+# Ejecutar tests específicos del controlador
+.\mvnw.cmd test -Dtest=ProductoControllerSimpleTest
