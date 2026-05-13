@@ -18,7 +18,7 @@ Este microservicio es una API REST para la gestión de productos de inventario. 
 
 ### 1. Crear Producto
 ```
-POST /api/productos
+POST /api/v1/productos
 ```
 **Cuerpo de la petición:**
 ```json
@@ -33,17 +33,17 @@ POST /api/productos
 
 ### 2. Obtener Todos los Productos
 ```
-GET /api/productos
+GET /api/v1/productos
 ```
 
 ### 3. Obtener Producto por ID
 ```
-GET /api/productos/{id}
+GET /api/v1/productos/{id}
 ```
 
 ### 4. Actualizar Producto
 ```
-PUT /api/productos/{id}
+PUT /api/v1/productos/{id}
 ```
 **Cuerpo de la petición:**
 ```json
@@ -58,7 +58,7 @@ PUT /api/productos/{id}
 
 ### 5. Eliminar Producto
 ```
-DELETE /api/productos/{id}
+DELETE /api/v1/productos/{id}
 ```
 
 ## Validaciones
@@ -98,12 +98,12 @@ Una vez iniciada la aplicación, puedes acceder a:
 ## Ejemplos de Uso con Postman
 
 ### Configuración básica
-- **Base URL**: `http://localhost:8080/api/productos`
+- **Base URL**: `http://localhost:8080/api/v1/productos`
 - **Headers**: `Content-Type: application/json`
 
 ### Ejemplo de petición POST
 ```bash
-curl -X POST http://localhost:8080/api/productos \
+curl -X POST http://localhost:8080/api/v1/productos \
   -H "Content-Type: application/json" \
   -d '{
     "nombre": "Monitor Samsung 27\"",
@@ -116,7 +116,7 @@ curl -X POST http://localhost:8080/api/productos \
 
 ### Ejemplo de petición GET
 ```bash
-curl -X GET http://localhost:8080/api/productos
+curl -X GET http://localhost:8080/api/v1/productos
 ```
 
 ## Ejecutar Tests
