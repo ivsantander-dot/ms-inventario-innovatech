@@ -1,15 +1,14 @@
 package com.inovatech.ms_inventario_innovatech.service;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-
+import com.inovatech.ms_inventario_innovatech.dto.request.ProductoRequest;
 import com.inovatech.ms_inventario_innovatech.entity.Producto;
+import com.inovatech.ms_inventario_innovatech.exception.BusinessException;
+import com.inovatech.ms_inventario_innovatech.exception.ResourceNotFoundException;
 import com.inovatech.ms_inventario_innovatech.repository.ProductoRepository;
-
 import jakarta.transaction.Transactional;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -18,10 +17,11 @@ public class ProductoService {
 
     private final ProductoRepository productoRepository;
 
-    public Producto crearProducto(Producto producto) {
-        if (productoRepository.existsByNombre(producto.getNombre())) {
-            throw new IllegalArgumentException("Ya existe un producto con el nombre: " + producto.getNombre());
+    public Producto crearProducto(ProductoRequest request) {
+        if (productoRepository.existsByNombre(request.nombre())) {
+            throw new BusinessException("Ya existe un producto con el nombre: " + request.nombre());
         }
+        Producto producto = new Producto(null, request.nombre(), request.descripcion(), request.precio(), request.stock(), request.categoria());
         return productoRepository.save(producto);
     }
 
@@ -29,33 +29,28 @@ public class ProductoService {
         return productoRepository.findAll();
     }
 
-    public Optional<Producto> obtenerProductoPorId(Long id) {
-        return productoRepository.findById(id);
+    public Producto obtenerProductoPorId(Long id) {
+        return productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
     }
 
-    public Producto actualizarProducto(Long id, Producto productoActualizado) {
-        return productoRepository.findById(id)
-                .map(productoExistente -> {
-                    if (!productoExistente.getNombre().equals(productoActualizado.getNombre()) 
-                        && productoRepository.existsByNombre(productoActualizado.getNombre())) {
-                        throw new IllegalArgumentException("Ya existe un producto con el nombre: " + productoActualizado.getNombre());
-                    }
-                    
-                    productoExistente.setNombre(productoActualizado.getNombre());
-                    productoExistente.setDescripcion(productoActualizado.getDescripcion());
-                    productoExistente.setPrecio(productoActualizado.getPrecio());
-                    productoExistente.setStock(productoActualizado.getStock());
-                    productoExistente.setCategoria(productoActualizado.getCategoria());
-                    
-                    return productoRepository.save(productoExistente);
-                })
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+    public Producto actualizarProducto(Long id, ProductoRequest request) {
+        Producto productoExistente = obtenerProductoPorId(id);
+        if (!productoExistente.getNombre().equals(request.nombre()) && productoRepository.existsByNombre(request.nombre())) {
+            throw new BusinessException("Ya existe un producto con el nombre: " + request.nombre());
+        }
+
+        productoExistente.setNombre(request.nombre());
+        productoExistente.setDescripcion(request.descripcion());
+        productoExistente.setPrecio(request.precio());
+        productoExistente.setStock(request.stock());
+        productoExistente.setCategoria(request.categoria());
+
+        return productoRepository.save(productoExistente);
     }
 
     public void eliminarProducto(Long id) {
-        if (!productoRepository.existsById(id)) {
-            throw new RuntimeException("Producto no encontrado con ID: " + id);
-        }
-        productoRepository.deleteById(id);
+        Producto producto = obtenerProductoPorId(id);
+        productoRepository.delete(producto);
     }
 }
