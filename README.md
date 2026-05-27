@@ -1,128 +1,117 @@
-# Microservicio de Inventario - MS Inventario Innovatech
+# ms-inventario-innovatech
 
-## Descripción
+## 1. Descripcion general
 
-Este microservicio es una API REST para la gestión de productos de inventario. Permite realizar operaciones CRUD (Crear, Leer, Actualizar, Eliminar) sobre productos, con validaciones de datos y persistencia en base de datos H2.
+Microservicio encargado de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos.
 
-## Tecnologías Utilizadas
+## 2. Rol dentro de la arquitectura
 
-- **Spring Boot 4.0.6** - Framework principal
-- **Java 21** - Lenguaje de programación
-- **Spring Data JPA** - Persistencia de datos
-- **H2 Database** - Base de datos en memoria para desarrollo
-- **SpringDoc OpenAPI 3.0.2** - Documentación automática de API
-- **Lombok** - Reducción de código boilerplate
-- **JUnit 5 + Mockito** - Framework de testing
+- API Gateway: recibe trafico oficial desde `/api/v1/productos/**`.
+- BFF: puede ser consumido por el BFF para dashboards agregados.
+- Otros microservicios: No evidenciado como consumidor HTTP saliente.
+- Base de datos: H2 en desarrollo y MySQL en produccion.
+- RabbitMQ: No evidenciado.
 
-## Endpoints Disponibles
+Flujo simple:
 
-### 1. Crear Producto
-```
-POST /api/v1/productos
-```
-**Cuerpo de la petición:**
-```json
-{
-    "nombre": "Laptop Dell XPS 15",
-    "descripcion": "Laptop de alto rendimiento con procesador Intel i7, 16GB RAM, 512GB SSD",
-    "precio": 1299.99,
-    "stock": 25,
-    "categoria": "Electrónica"
-}
-```
+`Cliente/Frontend -> API Gateway -> Inventario -> Base de datos`
 
-### 2. Obtener Todos los Productos
-```
-GET /api/v1/productos
-```
+## 3. Stack tecnico
 
-### 3. Obtener Producto por ID
-```
-GET /api/v1/productos/{id}
-```
+- Java 21
+- Spring Boot 3.5.14
+- Maven
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- JWT
+- H2
+- MySQL
+- Actuator
+- Swagger/OpenAPI
+- Docker
 
-### 4. Actualizar Producto
-```
-PUT /api/v1/productos/{id}
-```
-**Cuerpo de la petición:**
-```json
-{
-    "nombre": "Laptop Dell XPS 15 Actualizada",
-    "descripcion": "Laptop de alto rendimiento con procesador Intel i7, 32GB RAM, 1TB SSD",
-    "precio": 1499.99,
-    "stock": 20,
-    "categoria": "Electrónica Premium"
-}
-```
+## 4. Puerto del servicio
 
-### 5. Eliminar Producto
-```
-DELETE /api/v1/productos/{id}
-```
+| Concepto | Valor |
+|---|---|
+| Puerto esperado | `8087` |
+| Puerto configurado | `${SERVER_PORT:8087}` |
+| Archivo donde se define | `src/main/resources/application.properties` |
+| Variable de entorno asociada | `SERVER_PORT` |
 
-## Validaciones
+## 5. Variables de entorno
 
-Todos los campos son obligatorios y tienen las siguientes validaciones:
+| Variable | Descripcion | Valor por defecto | Obligatoria | Riesgo/observacion |
+|---|---|---|---|---|
+| `SERVER_PORT` | Puerto HTTP del servicio | `8087` | No | Debe alinearse con Gateway/Docker |
+| `JWT_SECRET` | Secreto para validar JWT | No evidenciado en default | Si | Critica |
+| `APP_SECURITY_DOCS_PUBLIC` | Control de docs publicas | `false` en base, `true` en dev | No | No abrir en prod |
+| `INVENTARIO_MYSQL_HOST` | Host MySQL prod | No default en prod | Si en prod | Debe existir |
+| `INVENTARIO_MYSQL_PORT` | Puerto MySQL prod | No default en prod | Si en prod | Debe existir |
+| `INVENTARIO_MYSQL_DATABASE` | Base prod | No default en prod | Si en prod | Debe existir |
+| `INVENTARIO_MYSQL_USERNAME` | Usuario DB prod | No default en prod | Si en prod | No usar root |
+| `INVENTARIO_MYSQL_PASSWORD` | Password DB prod | No default en prod | Si en prod | Sensible |
 
-- **nombre**: Obligatorio, máximo 100 caracteres
-- **descripcion**: Obligatorio, máximo 500 caracteres
-- **precio**: Obligatorio, no puede ser negativo (Float)
-- **stock**: Obligatorio, no puede ser negativo (Integer)
-- **categoria**: Obligatorio, máximo 50 caracteres
+## 6. Base de datos
 
-## Ejecución del Proyecto
+| Elemento | Valor |
+|---|---|
+| Motor | H2 en dev, MySQL en prod |
+| Base de datos | `inventario` en H2 dev, `${INVENTARIO_MYSQL_DATABASE}` en prod |
+| Entidades | `Producto` |
+| Repositories | `ProductoRepository` |
+| ddl-auto | `update` en dev, `validate` en prod |
+| show-sql | `true` en dev, `false` en prod |
 
-### Prerrequisitos
-- Java 21 o superior
-- Maven 3.6 o superior
+Riesgos o pendientes:
 
-### Ejecutar la aplicación
+- El `Dockerfile` expone `8080`, pero las propiedades del servicio usan `8087`.
+- La politica publica de lectura depende del Gateway y `SecurityConfig`.
+
+## 7. Endpoints principales
+
+| Metodo | Endpoint | Descripcion | Auth requerida | Request | Response |
+|---|---|---|---|---|---|
+| `POST` | `/api/v1/productos` | Crea un producto | Si | `ProductoRequest` | `ProductoResponse` |
+| `GET` | `/api/v1/productos` | Lista productos | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `List<ProductoResponse>` |
+| `GET` | `/api/v1/productos/{id}` | Busca producto por id | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `ProductoResponse` |
+| `PUT` | `/api/v1/productos/{id}` | Actualiza producto | Si | `ProductoRequest` | `ProductoResponse` |
+| `DELETE` | `/api/v1/productos/{id}` | Elimina producto | Si | No aplica | `204 No Content` |
+| `GET` | `/api/v1/productos/health` | Health funcional propio | Pendiente de verificacion | No aplica | No evidenciado |
+
+## 8. Seguridad
+
+- Usa Spring Security: Si.
+- Valida JWT: Si.
+- Depende del Gateway: No estrictamente; puede validar acceso directo.
+- Endpoints publicos: lectura de productos segun arquitectura; validar con `SecurityConfig`.
+- Endpoints protegidos: escritura y borrado de productos.
+- Riesgos detectados:
+  - `Dockerfile` expone un puerto distinto al configurado.
+  - El endpoint `/health` propio existe, pero su politica exacta debe verificarse en `SecurityConfig`.
+
+## 9. Integraciones
+
+| Origen | Destino | Tipo | URL/variable | Estado |
+|---|---|---|---|---|
+| Gateway | Inventario | HTTP | `/api/v1/productos/**` | Evidenciado |
+| BFF | Inventario | HTTP | No evidenciado aqui; esperado por arquitectura | Pendiente de verificacion |
+| Inventario | Base de datos | JPA/JDBC | H2 dev / `INVENTARIO_MYSQL_*` prod | Evidenciado |
+
+## 10. Eventos RabbitMQ
+
+No se evidencian eventos RabbitMQ en este microservicio.
+
+## 11. Ejecucion local
+
 ```bash
-# Compilar y ejecutar
-.\mvnw.cmd spring-boot:run
+./mvnw clean package
+./mvnw spring-boot:run
 ```
 
-La aplicación se iniciará en `http://localhost:8080`
+Pruebas basicas:
 
-### Documentación de la API
-Una vez iniciada la aplicación, puedes acceder a:
-
-- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
-- **OpenAPI Docs**: `http://localhost:8080/api-docs`
-- **H2 Console**: `http://localhost:8080/h2-console`
-  - **JDBC URL**: `jdbc:h2:mem:inventario`
-  - **Usuario**: `sa`
-  - **Contraseña**: `password`
-
-## Ejemplos de Uso con Postman
-
-### Configuración básica
-- **Base URL**: `http://localhost:8080/api/v1/productos`
-- **Headers**: `Content-Type: application/json`
-
-### Ejemplo de petición POST
 ```bash
-curl -X POST http://localhost:8080/api/v1/productos \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Monitor Samsung 27\"",
-    "descripcion": "Monitor IPS 4K con HDR10 y 60Hz",
-    "precio": 399.99,
-    "stock": 15,
-    "categoria": "Pantallas"
-  }'
+curl http://localhost:8087/api/v1/productos
 ```
-
-### Ejemplo de petición GET
-```bash
-curl -X GET http://localhost:8080/api/v1/productos
-```
-
-## Ejecutar Tests
-```bash
-# Ejecutar todos los tests
-.\mvnw.cmd test
-
-# Ejecutar tests específicos del controlador
-.\mvnw.cmd test -Dtest=ProductoControllerSimpleTest
