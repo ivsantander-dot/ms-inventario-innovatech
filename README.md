@@ -1,5 +1,15 @@
 # ms-inventario-innovatech
 
+## Estado de evidencia
+
+| Categoria | Estado |
+|---|---|
+| Implementado | CRUD de productos, DTOs, errores |
+| Configurado | MySQL/H2, perfiles, Docker |
+| Validado | compilacion |
+| Pendiente de validacion runtime | consumo real via Gateway y stack completo |
+| No evidenciado | RabbitMQ |
+
 ## 1. Descripcion general
 
 Microservicio encargado de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos.
