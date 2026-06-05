@@ -62,6 +62,7 @@ Flujo simple:
 | `INVENTARIO_MYSQL_DATABASE` | Base prod | No default en prod | Si en prod | Debe existir |
 | `INVENTARIO_MYSQL_USERNAME` | Usuario DB prod | No default en prod | Si en prod | No usar root |
 | `INVENTARIO_MYSQL_PASSWORD` | Password DB prod | No default en prod | Si en prod | Sensible |
+| `INVENTARIO_DEMO_PRODUCTS_ENABLED` | Inserta 10 productos demo idempotentes | `false` | No | Solo local/desarrollo; no activar en produccion |
 
 ## 6. Base de datos
 
@@ -125,3 +126,12 @@ Pruebas basicas:
 ```bash
 curl http://localhost:8087/api/v1/productos
 ```
+
+## 12. Datos demo locales
+
+El servicio incluye un seeder idempotente de 10 productos de prueba para validar catalogo cliente y CRUD administrativo.
+
+- Activacion: `INVENTARIO_DEMO_PRODUCTS_ENABLED=true`.
+- Alcance: entorno local/desarrollo o Docker local.
+- Seguridad: no contiene datos sensibles y no debe activarse en produccion.
+- Idempotencia: no duplica productos si ya existe un producto con el mismo `nombre`.
