@@ -1,28 +1,27 @@
 package com.inovatech.ms_inventario_innovatech.controller;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.inovatech.ms_inventario_innovatech.dto.request.ProductoRequest;
+import com.inovatech.ms_inventario_innovatech.dto.response.ProductoResponse;
+import com.inovatech.ms_inventario_innovatech.entity.Producto;
+import com.inovatech.ms_inventario_innovatech.service.ProductoService;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-import com.inovatech.ms_inventario_innovatech.entity.Producto;
-import com.inovatech.ms_inventario_innovatech.service.ProductoService;
 
 class ProductoControllerTest {
 
@@ -38,174 +37,103 @@ class ProductoControllerTest {
     }
 
     @Test
-    void testCrearProducto() {
-        // Arrange
-        Producto producto = new Producto();
-        producto.setNombre("Laptop Test");
-        producto.setDescripcion("Laptop para pruebas");
-        producto.setPrecio(999.99f);
-        producto.setStock(10);
-        producto.setCategoria("Electrónica");
+    void crearProducto_retornaProductoCreado() {
+        ProductoRequest request = new ProductoRequest("Laptop Test", "Laptop para pruebas", 999.99f, 10, "Electronica", "https://example.com/laptop.jpg");
+        Producto productoGuardado = producto(1L, "Laptop Test", 999.99f, 10, "Electronica", "https://example.com/laptop.jpg");
 
-        Producto productoGuardado = new Producto();
-        productoGuardado.setId(1L);
-        productoGuardado.setNombre("Laptop Test");
-        productoGuardado.setDescripcion("Laptop para pruebas");
-        productoGuardado.setPrecio(999.99f);
-        productoGuardado.setStock(10);
-        productoGuardado.setCategoria("Electrónica");
+        when(productoService.crearProducto(any(ProductoRequest.class))).thenReturn(productoGuardado);
 
-        when(productoService.crearProducto(any(Producto.class))).thenReturn(productoGuardado);
+        ResponseEntity<ProductoResponse> response = productoController.crearProducto(request);
 
-        // Act
-        ResponseEntity<Producto> response = productoController.crearProducto(producto);
-
-        // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1L, response.getBody().getId());
-        assertEquals("Laptop Test", response.getBody().getNombre());
-        assertEquals(999.99f, response.getBody().getPrecio());
-        verify(productoService, times(1)).crearProducto(any(Producto.class));
+        assertEquals(1L, response.getBody().id());
+        assertEquals("Laptop Test", response.getBody().nombre());
+        assertEquals(999.99f, response.getBody().precio());
+        assertEquals("https://example.com/laptop.jpg", response.getBody().imagenUrl());
+        verify(productoService, times(1)).crearProducto(any(ProductoRequest.class));
     }
 
     @Test
-    void testObtenerTodosLosProductos() {
-        // Arrange
-        Producto producto1 = new Producto();
-        producto1.setId(1L);
-        producto1.setNombre("Producto 1");
-        producto1.setDescripcion("Descripción 1");
-        producto1.setPrecio(100.0f);
-        producto1.setStock(5);
-        producto1.setCategoria("Categoría 1");
+    void obtenerTodosLosProductos_retornaLista() {
+        when(productoService.obtenerTodosLosProductos()).thenReturn(List.of(
+                producto(1L, "Producto 1", 100.0f, 5, "Categoria 1", "https://example.com/1.jpg"),
+                producto(2L, "Producto 2", 200.0f, 10, "Categoria 2", "https://example.com/2.jpg")));
 
-        Producto producto2 = new Producto();
-        producto2.setId(2L);
-        producto2.setNombre("Producto 2");
-        producto2.setDescripcion("Descripción 2");
-        producto2.setPrecio(200.0f);
-        producto2.setStock(10);
-        producto2.setCategoria("Categoría 2");
+        ResponseEntity<List<ProductoResponse>> response = productoController.obtenerTodosLosProductos();
 
-        List<Producto> productos = Arrays.asList(producto1, producto2);
-        when(productoService.obtenerTodosLosProductos()).thenReturn(productos);
-
-        // Act
-        ResponseEntity<List<Producto>> response = productoController.obtenerTodosLosProductos();
-
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().size());
-        assertEquals("Producto 1", response.getBody().get(0).getNombre());
-        assertEquals("Producto 2", response.getBody().get(1).getNombre());
+        assertEquals("Producto 1", response.getBody().get(0).nombre());
+        assertEquals("Producto 2", response.getBody().get(1).nombre());
         verify(productoService, times(1)).obtenerTodosLosProductos();
     }
 
     @Test
-    void testObtenerProductoPorId() {
-        // Arrange
-        Producto producto = new Producto();
-        producto.setId(1L);
-        producto.setNombre("Producto Test");
-        producto.setDescripcion("Descripción Test");
-        producto.setPrecio(150.0f);
-        producto.setStock(8);
-        producto.setCategoria("Test");
+    void obtenerProductosConStockBajo_retornaListaFiltrada() {
+        when(productoService.obtenerProductosConStockMenorA(5)).thenReturn(List.of(
+                producto(1L, "Producto Bajo Stock", 100.0f, 3, "Categoria 1", null)));
 
-        when(productoService.obtenerProductoPorId(1L)).thenReturn(Optional.of(producto));
+        ResponseEntity<List<ProductoResponse>> response = productoController.obtenerProductosConStockBajo(5);
 
-        // Act
-        ResponseEntity<Producto> response = productoController.obtenerProductoPorId(1L);
-
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1L, response.getBody().getId());
-        assertEquals("Producto Test", response.getBody().getNombre());
+        assertEquals(1, response.getBody().size());
+        assertEquals(3, response.getBody().get(0).stock());
+        verify(productoService, times(1)).obtenerProductosConStockMenorA(5);
+    }
+
+    @Test
+    void obtenerProductoPorId_retornaProducto() {
+        when(productoService.obtenerProductoPorId(1L)).thenReturn(producto(1L, "Producto Test", 150.0f, 8, "Test", "https://example.com/test.jpg"));
+
+        ResponseEntity<ProductoResponse> response = productoController.obtenerProductoPorId(1L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1L, response.getBody().id());
+        assertEquals("Producto Test", response.getBody().nombre());
         verify(productoService, times(1)).obtenerProductoPorId(1L);
     }
 
     @Test
-    void testObtenerProductoPorIdNoEncontrado() {
-        // Arrange
-        when(productoService.obtenerProductoPorId(999L)).thenReturn(Optional.empty());
+    void actualizarProducto_retornaProductoActualizado() {
+        ProductoRequest request = new ProductoRequest("Producto Actualizado", "Descripcion actualizada", 300.0f, 15, "Nueva categoria", "https://example.com/updated.jpg");
+        when(productoService.actualizarProducto(eq(1L), any(ProductoRequest.class)))
+                .thenReturn(producto(1L, "Producto Actualizado", 300.0f, 15, "Nueva categoria", "https://example.com/updated.jpg"));
 
-        // Act
-        ResponseEntity<Producto> response = productoController.obtenerProductoPorId(999L);
+        ResponseEntity<ProductoResponse> response = productoController.actualizarProducto(1L, request);
 
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertNull(response.getBody());
-        verify(productoService, times(1)).obtenerProductoPorId(999L);
-    }
-
-    @Test
-    void testActualizarProducto() {
-        // Arrange
-        Producto productoActualizado = new Producto();
-        productoActualizado.setNombre("Producto Actualizado");
-        productoActualizado.setDescripcion("Descripción actualizada");
-        productoActualizado.setPrecio(300.0f);
-        productoActualizado.setStock(15);
-        productoActualizado.setCategoria("Nueva categoría");
-
-        Producto productoResultado = new Producto();
-        productoResultado.setId(1L);
-        productoResultado.setNombre("Producto Actualizado");
-        productoResultado.setDescripcion("Descripción actualizada");
-        productoResultado.setPrecio(300.0f);
-        productoResultado.setStock(15);
-        productoResultado.setCategoria("Nueva categoría");
-
-        when(productoService.actualizarProducto(eq(1L), any(Producto.class))).thenReturn(productoResultado);
-
-        // Act
-        ResponseEntity<Producto> response = productoController.actualizarProducto(1L, productoActualizado);
-
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1L, response.getBody().getId());
-        assertEquals("Producto Actualizado", response.getBody().getNombre());
-        assertEquals(300.0f, response.getBody().getPrecio());
-        verify(productoService, times(1)).actualizarProducto(eq(1L), any(Producto.class));
+        assertEquals(1L, response.getBody().id());
+        assertEquals("Producto Actualizado", response.getBody().nombre());
+        assertEquals(300.0f, response.getBody().precio());
+        assertEquals("https://example.com/updated.jpg", response.getBody().imagenUrl());
+        verify(productoService, times(1)).actualizarProducto(eq(1L), any(ProductoRequest.class));
     }
 
     @Test
-    void testEliminarProducto() {
-        // Arrange
+    void eliminarProducto_retornaNoContent() {
         doNothing().when(productoService).eliminarProducto(1L);
 
-        // Act
         ResponseEntity<Void> response = productoController.eliminarProducto(1L);
 
-        // Assert
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertNull(response.getBody());
         verify(productoService, times(1)).eliminarProducto(1L);
     }
 
-    @Test
-    void testCrearProductoConNombreDuplicado() {
-        // Arrange
+    private Producto producto(Long id, String nombre, Float precio, Integer stock, String categoria, String imagenUrl) {
         Producto producto = new Producto();
-        producto.setNombre("Laptop Duplicada");
-        producto.setDescripcion("Laptop duplicada");
-        producto.setPrecio(999.99f);
-        producto.setStock(10);
-        producto.setCategoria("Electrónica");
-
-        when(productoService.crearProducto(any(Producto.class)))
-                .thenThrow(new IllegalArgumentException("Ya existe un producto con el nombre: Laptop Duplicada"));
-
-        // Act
-        ResponseEntity<Producto> response = productoController.crearProducto(producto);
-
-        // Assert
-        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-        assertNull(response.getBody());
-        verify(productoService, times(1)).crearProducto(any(Producto.class));
+        producto.setId(id);
+        producto.setNombre(nombre);
+        producto.setDescripcion("Descripcion " + nombre);
+        producto.setPrecio(precio);
+        producto.setStock(stock);
+        producto.setCategoria(categoria);
+        producto.setImagenUrl(imagenUrl);
+        return producto;
     }
 }

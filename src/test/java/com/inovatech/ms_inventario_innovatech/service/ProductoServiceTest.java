@@ -30,7 +30,7 @@ class ProductoServiceTest {
 
     @Test
     void crearProducto_fallaSiNombreYaExiste() {
-        ProductoRequest request = new ProductoRequest("Notebook Pro", "Equipo de prueba", 999990f, 5, "Computacion");
+        ProductoRequest request = new ProductoRequest("Notebook Pro", "Equipo de prueba", 999990f, 5, "Computacion", "https://example.com/notebook.jpg");
         when(productoRepository.existsByNombre("Notebook Pro")).thenReturn(true);
 
         BusinessException exception = assertThrows(BusinessException.class, () -> productoService.crearProducto(request));
@@ -40,8 +40,8 @@ class ProductoServiceTest {
 
     @Test
     void crearProducto_guardaEntidadConDatosDelRequest() {
-        ProductoRequest request = new ProductoRequest("Monitor QA", "Monitor 27 pulgadas", 249990f, 8, "Perifericos");
-        Producto saved = new Producto(7L, "Monitor QA", "Monitor 27 pulgadas", 249990f, 8, "Perifericos");
+        ProductoRequest request = new ProductoRequest("Monitor QA", "Monitor 27 pulgadas", 249990f, 8, "Perifericos", "https://example.com/monitor.jpg");
+        Producto saved = new Producto(7L, "Monitor QA", "Monitor 27 pulgadas", 249990f, 8, "Perifericos", "https://example.com/monitor.jpg");
 
         when(productoRepository.existsByNombre("Monitor QA")).thenReturn(false);
         when(productoRepository.save(any(Producto.class))).thenReturn(saved);
@@ -52,6 +52,7 @@ class ProductoServiceTest {
         verify(productoRepository).save(captor.capture());
         assertEquals("Monitor QA", captor.getValue().getNombre());
         assertEquals(249990f, captor.getValue().getPrecio());
+        assertEquals("https://example.com/monitor.jpg", captor.getValue().getImagenUrl());
         assertEquals(7L, result.getId());
     }
 

@@ -21,12 +21,23 @@ public class ProductoService {
         if (productoRepository.existsByNombre(request.nombre())) {
             throw new BusinessException("Ya existe un producto con el nombre: " + request.nombre());
         }
-        Producto producto = new Producto(null, request.nombre(), request.descripcion(), request.precio(), request.stock(), request.categoria());
+        Producto producto = new Producto(
+                null,
+                request.nombre(),
+                request.descripcion(),
+                request.precio(),
+                request.stock(),
+                request.categoria(),
+                normalizeImageUrl(request.imagenUrl()));
         return productoRepository.save(producto);
     }
 
     public List<Producto> obtenerTodosLosProductos() {
         return productoRepository.findAll();
+    }
+
+    public List<Producto> obtenerProductosConStockMenorA(Integer stockMenorA) {
+        return productoRepository.findByStockLessThan(stockMenorA);
     }
 
     public Producto obtenerProductoPorId(Long id) {
@@ -45,6 +56,7 @@ public class ProductoService {
         productoExistente.setPrecio(request.precio());
         productoExistente.setStock(request.stock());
         productoExistente.setCategoria(request.categoria());
+        productoExistente.setImagenUrl(normalizeImageUrl(request.imagenUrl()));
 
         return productoRepository.save(productoExistente);
     }
@@ -52,5 +64,14 @@ public class ProductoService {
     public void eliminarProducto(Long id) {
         Producto producto = obtenerProductoPorId(id);
         productoRepository.delete(producto);
+    }
+
+    private String normalizeImageUrl(String imagenUrl) {
+        if (imagenUrl == null) {
+            return null;
+        }
+
+        String normalized = imagenUrl.trim();
+        return normalized.isBlank() ? null : normalized;
     }
 }

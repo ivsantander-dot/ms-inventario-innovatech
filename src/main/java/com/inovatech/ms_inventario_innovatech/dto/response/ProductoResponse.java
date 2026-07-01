@@ -6,6 +6,7 @@ public record ProductoResponse(
         String descripcion,
         Float precio,
         Integer stock,
-        String categoria
+        String categoria,
+        String imagenUrl
 ) {
 }

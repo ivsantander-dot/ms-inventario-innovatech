@@ -44,6 +44,12 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.obtenerTodosLosProductos().stream().map(this::toResponse).toList());
     }
 
+    @GetMapping(params = "stockMenorA")
+    @Operation(summary = "Obtener productos con stock bajo", description = "Retorna productos cuyo stock es menor al umbral indicado")
+    public ResponseEntity<List<ProductoResponse>> obtenerProductosConStockBajo(@RequestParam Integer stockMenorA) {
+        return ResponseEntity.ok(productoService.obtenerProductosConStockMenorA(stockMenorA).stream().map(this::toResponse).toList());
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Obtener producto por ID", description = "Retorna un producto especifico segun su ID")
     @ApiResponses(value = {
@@ -90,6 +96,7 @@ public class ProductoController {
                 producto.getDescripcion(),
                 producto.getPrecio(),
                 producto.getStock(),
-                producto.getCategoria());
+                producto.getCategoria(),
+                producto.getImagenUrl());
     }
 }

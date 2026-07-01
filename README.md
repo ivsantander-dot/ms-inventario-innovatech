@@ -4,7 +4,7 @@
 
 | Categoria | Estado |
 |---|---|
-| Implementado | CRUD de productos, DTOs, errores |
+| Implementado | CRUD de productos, DTOs, errores, `imagenUrl` |
 | Configurado | MySQL/H2, perfiles, Docker |
 | Validado | compilacion |
 | Pendiente de validacion runtime | consumo real via Gateway y stack completo |
@@ -12,7 +12,7 @@
 
 ## 1. Descripcion general
 
-Microservicio encargado de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos.
+Microservicio encargado de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos, incluyendo una URL de imagen para catalogo y panel administrativo.
 
 ## 2. Rol dentro de la arquitectura
 
@@ -70,7 +70,7 @@ Flujo simple:
 |---|---|
 | Motor | H2 en dev, MySQL en prod |
 | Base de datos | `inventario` en H2 dev, `${INVENTARIO_MYSQL_DATABASE}` en prod |
-| Entidades | `Producto` |
+| Entidades | `Producto` con `imagenUrl` opcional |
 | Repositories | `ProductoRepository` |
 | ddl-auto | `update` en dev, `validate` en prod |
 | show-sql | `true` en dev, `false` en prod |
@@ -84,10 +84,10 @@ Riesgos o pendientes:
 
 | Metodo | Endpoint | Descripcion | Auth requerida | Request | Response |
 |---|---|---|---|---|---|
-| `POST` | `/api/v1/productos` | Crea un producto | Si | `ProductoRequest` | `ProductoResponse` |
+| `POST` | `/api/v1/productos` | Crea un producto | Si | `ProductoRequest` con `imagenUrl` | `ProductoResponse` |
 | `GET` | `/api/v1/productos` | Lista productos | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `List<ProductoResponse>` |
 | `GET` | `/api/v1/productos/{id}` | Busca producto por id | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `ProductoResponse` |
-| `PUT` | `/api/v1/productos/{id}` | Actualiza producto | Si | `ProductoRequest` | `ProductoResponse` |
+| `PUT` | `/api/v1/productos/{id}` | Actualiza producto | Si | `ProductoRequest` con `imagenUrl` | `ProductoResponse` |
 | `DELETE` | `/api/v1/productos/{id}` | Elimina producto | Si | No aplica | `204 No Content` |
 | `GET` | `/api/v1/productos/health` | Health funcional propio | Pendiente de verificacion | No aplica | No evidenciado |
 
@@ -135,3 +135,12 @@ El servicio incluye un seeder idempotente de 10 productos de prueba para validar
 - Alcance: entorno local/desarrollo o Docker local.
 - Seguridad: no contiene datos sensibles y no debe activarse en produccion.
 - Idempotencia: no duplica productos si ya existe un producto con el mismo `nombre`.
+- Imagenes: los productos demo incluyen `imagenUrl` HTTP/HTTPS para pruebas visuales del catalogo.
+
+## 13. Campo de imagen
+
+- Campo persistido: `imagenUrl`
+- Columna esperada en base de datos: `imagen_url`
+- Compatibilidad: si `imagenUrl` viene vacio o `null`, el frontend cliente debe mostrar placeholder.
+- Script manual de apoyo para bases existentes:
+  - [db/manual/2026-07-01-productos-imagen-url.sql](./db/manual/2026-07-01-productos-imagen-url.sql)
