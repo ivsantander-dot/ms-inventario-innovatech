@@ -3,144 +3,128 @@
 ## Estado de evidencia
 
 | Categoria | Estado |
-|---|---|
-| Implementado | CRUD de productos, DTOs, errores, `imagenUrl` |
-| Configurado | MySQL/H2, perfiles, Docker |
+| --- | --- |
+| Implementado | CRUD de productos, DTOs, `imagenUrl`, JWT, Actuator |
+| Configurado | MySQL, perfiles `local/aws`, Docker |
 | Validado | compilacion |
-| Pendiente de validacion runtime | consumo real via Gateway y stack completo |
+| Pendiente runtime | consumo real via Gateway/BFF y RDS/AWS |
 | No evidenciado | RabbitMQ |
 
 ## 1. Descripcion general
 
-Microservicio encargado de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos, incluyendo una URL de imagen para catalogo y panel administrativo.
+Microservicio encargado del catalogo de productos e inventario. Permite crear, listar, obtener, actualizar y eliminar productos, incluyendo soporte para `imagenUrl`.
 
 ## 2. Rol dentro de la arquitectura
 
-- API Gateway: recibe trafico oficial desde `/api/v1/productos/**`.
-- BFF: puede ser consumido por el BFF para dashboards agregados.
-- Otros microservicios: No evidenciado como consumidor HTTP saliente.
-- Base de datos: H2 en desarrollo y MySQL en produccion.
-- RabbitMQ: No evidenciado.
+- API Gateway: entrada oficial para `/api/v1/productos/**`.
+- BFF: puede consumir informacion para dashboards agregados.
+- Persistencia: MySQL propia.
+- RabbitMQ: no se evidencia uso.
 
-Flujo simple:
+Flujo base:
 
-`Cliente/Frontend -> API Gateway -> Inventario -> Base de datos`
+`Frontend -> API Gateway -> Inventario -> MySQL`
 
 ## 3. Stack tecnico
 
 - Java 21
 - Spring Boot 3.5.14
-- Maven
+- Maven Wrapper
 - Spring Web
 - Spring Data JPA
 - Spring Security
 - JWT
-- H2
 - MySQL
-- Actuator
-- Swagger/OpenAPI
+- Spring Boot Actuator
+- Springdoc OpenAPI
 - Docker
 
-## 4. Puerto del servicio
+## 4. Puerto y exposicion
 
-| Concepto | Valor |
-|---|---|
-| Puerto esperado | `8087` |
-| Puerto configurado | `${SERVER_PORT:8087}` |
-| Archivo donde se define | `src/main/resources/application.properties` |
-| Variable de entorno asociada | `SERVER_PORT` |
+| Item | Valor |
+| --- | --- |
+| Puerto interno | `8087` |
+| Configuracion | `${SERVER_PORT:8087}` |
+| Exposicion publica oficial | via API Gateway |
+| Exposicion directa recomendada | no |
 
-## 5. Variables de entorno
+## 5. Perfiles soportados
 
-| Variable | Descripcion | Valor por defecto | Obligatoria | Riesgo/observacion |
-|---|---|---|---|---|
-| `SERVER_PORT` | Puerto HTTP del servicio | `8087` | No | Debe alinearse con Gateway/Docker |
-| `JWT_SECRET` | Secreto para validar JWT | No evidenciado en default | Si | Critica |
-| `APP_SECURITY_DOCS_PUBLIC` | Control de docs publicas | `false` en base, `true` en dev | No | No abrir en prod |
-| `INVENTARIO_MYSQL_HOST` | Host MySQL prod | No default en prod | Si en prod | Debe existir |
-| `INVENTARIO_MYSQL_PORT` | Puerto MySQL prod | No default en prod | Si en prod | Debe existir |
-| `INVENTARIO_MYSQL_DATABASE` | Base prod | No default en prod | Si en prod | Debe existir |
-| `INVENTARIO_MYSQL_USERNAME` | Usuario DB prod | No default en prod | Si en prod | No usar root |
-| `INVENTARIO_MYSQL_PASSWORD` | Password DB prod | No default en prod | Si en prod | Sensible |
-| `INVENTARIO_DEMO_PRODUCTS_ENABLED` | Inserta 10 productos demo idempotentes | `false` | No | Solo local/desarrollo; no activar en produccion |
+| Perfil | Uso | Estado |
+| --- | --- | --- |
+| `local` | Docker local / desarrollo | Configurado |
+| `aws` | ECS Fargate + RDS | Configurado |
 
-## 6. Base de datos
+Notas:
 
-| Elemento | Valor |
-|---|---|
-| Motor | H2 en dev, MySQL en prod |
-| Base de datos | `inventario` en H2 dev, `${INVENTARIO_MYSQL_DATABASE}` en prod |
-| Entidades | `Producto` con `imagenUrl` opcional |
-| Repositories | `ProductoRepository` |
-| ddl-auto | `update` en dev, `validate` en prod |
-| show-sql | `true` en dev, `false` en prod |
+- El perfil por defecto es `local`.
+- `ddl-auto` se mantiene en `update`.
+- El `Dockerfile` actual ya esta alineado con el puerto `8087`.
 
-Riesgos o pendientes:
+## 6. Variables de entorno requeridas
 
-- El `Dockerfile` expone `8080`, pero las propiedades del servicio usan `8087`.
-- La politica publica de lectura depende del Gateway y `SecurityConfig`.
+### Comunes
+
+| Variable | Uso |
+| --- | --- |
+| `SERVER_PORT` | puerto HTTP |
+| `JWT_SECRET` | secreto JWT |
+| `APP_SECURITY_DOCS_PUBLIC` | habilita docs publicas en local |
+| `INVENTARIO_DEMO_PRODUCTS_ENABLED` | habilita seed demo local |
+
+### Base de datos
+
+| Variable | Local | AWS |
+| --- | --- | --- |
+| `DB_HOST` | opcional, default `localhost` | requerida |
+| `DB_PORT` | opcional, default `3306` | requerida |
+| `DB_NAME` | opcional, default `innovatech_inventario` | requerida |
+| `DB_USERNAME` | opcional | requerida |
+| `DB_PASSWORD` | opcional | requerida |
+
+Compatibilidad adicional:
+
+- `INVENTARIO_MYSQL_HOST`
+- `INVENTARIO_MYSQL_PORT`
+- `INVENTARIO_MYSQL_DATABASE`
+- `INVENTARIO_MYSQL_USERNAME`
+- `INVENTARIO_MYSQL_PASSWORD`
 
 ## 7. Endpoints principales
 
-| Metodo | Endpoint | Descripcion | Auth requerida | Request | Response |
-|---|---|---|---|---|---|
-| `POST` | `/api/v1/productos` | Crea un producto | Si | `ProductoRequest` con `imagenUrl` | `ProductoResponse` |
-| `GET` | `/api/v1/productos` | Lista productos | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `List<ProductoResponse>` |
-| `GET` | `/api/v1/productos/{id}` | Busca producto por id | No en Gateway para lectura; politica local segun `SecurityConfig` | No aplica | `ProductoResponse` |
-| `PUT` | `/api/v1/productos/{id}` | Actualiza producto | Si | `ProductoRequest` con `imagenUrl` | `ProductoResponse` |
-| `DELETE` | `/api/v1/productos/{id}` | Elimina producto | Si | No aplica | `204 No Content` |
-| `GET` | `/api/v1/productos/health` | Health funcional propio | Pendiente de verificacion | No aplica | No evidenciado |
+| Metodo | Ruta | Uso |
+| --- | --- | --- |
+| `GET` | `/api/v1/productos` | listar productos |
+| `GET` | `/api/v1/productos/{id}` | obtener producto |
+| `POST` | `/api/v1/productos` | crear producto |
+| `PUT` | `/api/v1/productos/{id}` | actualizar producto |
+| `DELETE` | `/api/v1/productos/{id}` | eliminar producto |
+| `GET` | `/actuator/health` | healthcheck |
 
-## 8. Seguridad
+## 8. Integracion y dependencias
 
-- Usa Spring Security: Si.
-- Valida JWT: Si.
-- Depende del Gateway: No estrictamente; puede validar acceso directo.
-- Endpoints publicos: lectura de productos segun arquitectura; validar con `SecurityConfig`.
-- Endpoints protegidos: escritura y borrado de productos.
-- Riesgos detectados:
-  - `Dockerfile` expone un puerto distinto al configurado.
-  - El endpoint `/health` propio existe, pero su politica exacta debe verificarse en `SecurityConfig`.
+| Componente | Tipo | Estado |
+| --- | --- | --- |
+| API Gateway | HTTP entrante | Evidenciado |
+| BFF | consumo interno potencial | Evidenciado por configuracion |
+| MySQL | persistencia | Evidenciado |
+| RabbitMQ | eventos | No evidenciado |
 
-## 9. Integraciones
+## 9. Docker y build
 
-| Origen | Destino | Tipo | URL/variable | Estado |
-|---|---|---|---|---|
-| Gateway | Inventario | HTTP | `/api/v1/productos/**` | Evidenciado |
-| BFF | Inventario | HTTP | No evidenciado aqui; esperado por arquitectura | Pendiente de verificacion |
-| Inventario | Base de datos | JPA/JDBC | H2 dev / `INVENTARIO_MYSQL_*` prod | Evidenciado |
+- `Dockerfile` presente y validado.
+- Imagen preparada para `SPRING_PROFILES_ACTIVE=aws` por defecto en contenedor.
+- El servicio local via `docker-compose` usa perfil `local`.
 
-## 10. Eventos RabbitMQ
-
-No se evidencian eventos RabbitMQ en este microservicio.
-
-## 11. Ejecucion local
+Comandos utiles:
 
 ```bash
-./mvnw clean package
-./mvnw spring-boot:run
+./mvnw.cmd -q -DskipTests compile
+docker build -t innovatech-inventario .
 ```
 
-Pruebas basicas:
+## 10. Estado actual de validacion
 
-```bash
-curl http://localhost:8087/api/v1/productos
-```
-
-## 12. Datos demo locales
-
-El servicio incluye un seeder idempotente de 10 productos de prueba para validar catalogo cliente y CRUD administrativo.
-
-- Activacion: `INVENTARIO_DEMO_PRODUCTS_ENABLED=true`.
-- Alcance: entorno local/desarrollo o Docker local.
-- Seguridad: no contiene datos sensibles y no debe activarse en produccion.
-- Idempotencia: no duplica productos si ya existe un producto con el mismo `nombre`.
-- Imagenes: los productos demo incluyen `imagenUrl` HTTP/HTTPS para pruebas visuales del catalogo.
-
-## 13. Campo de imagen
-
-- Campo persistido: `imagenUrl`
-- Columna esperada en base de datos: `imagen_url`
-- Compatibilidad: si `imagenUrl` viene vacio o `null`, el frontend cliente debe mostrar placeholder.
-- Script manual de apoyo para bases existentes:
-  - [db/manual/2026-07-01-productos-imagen-url.sql](./db/manual/2026-07-01-productos-imagen-url.sql)
+- `Validado`: compilacion.
+- `Configurado`: perfiles `local/aws`, Docker, variables `DB_*`.
+- `Pendiente runtime`: validacion integral en AWS y consumo funcional extremo a extremo con frontend.
